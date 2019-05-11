@@ -4,4 +4,4 @@ services:
 before_install:
   - docker build -t tarotar/docker-react -f Dockerfile.dev .
 script:
-  - docker run tarotar/docker-react npm run test -- --coverage
+  - docker run tarotar/docker-react sh -c 'CI=true npm run test'
