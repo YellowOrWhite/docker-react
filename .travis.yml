@@ -1,7 +1,39 @@
 sudo: required
+
+cache:
+  directories:
+    - "$HOME/google-cloud-sdk/"
+
 services:
   - docker
+
+env:
+  global:
+    - GOOGLE_APPLICATION_CREDENTIALS=~/gcp-key.json
+    - PROJECT_NAME=ci-pipeline-example
+    - CLUSTER_NAME=standard-cluster-1
+    - CLOUDSDK_COMPUTE_ZONE=europe-west3-a
+    - DOCKER_IMAGE_NAME=docker-react
+    - KUBE_DEPLOYMENT_NAME=docker-react
+    - KUBE_CONTAINER_NAME=docker-react-sha256
+
 before_install:
   - docker build -t tarotar/docker-react -f Dockerfile.dev .
+
 script:
   - docker run tarotar/docker-react sh -c 'CI=true npm run test'
+
+before_deploy:
+  - openssl aes-256-cbc -K $encrypted_8e006f684781_key -iv $encrypted_8e006f684781_iv -in gcp-key.json.enc -out $GOOGLE_APPLICATION_CREDENTIALS -d
+  - if [ ! -d "$HOME/google-cloud-sdk/bin" ]; then rm -rf $HOME/google-cloud-sdk; export CLOUDSDK_CORE_DISABLE_PROMPTS=1; curl https://sdk.cloud.google.com | bash; fi
+  - source /home/travis/google-cloud-sdk/path.bash.inc
+  - gcloud --quiet version
+  - gcloud --quiet components update
+  - gcloud --quiet components update kubectl
+
+deploy:
+  - provider: script
+    script: sh deploy-production.sh
+    skip_cleanup: true
+    on:
+      branch: master
